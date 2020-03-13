@@ -1,0 +1,8 @@
+{
+  "files.associations": {
+    "gl.h": "c",
+    "glext.h": "c",
+    "glfw3.h": "c",
+    "wrapedgl.h": "c"
+  }
+}

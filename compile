@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ ! -z $1 ]; then
+gcc ./$1 -ggdb3 ./GL/src/glad.c -I./GL/include -lglfw -ldl
+else
+gcc ./main.c ./src/wrapedgl.c -ggdb3 ./GL/src/glad.c -I./GL/include -lglfw -ldl
+fi

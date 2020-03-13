@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "gcc build active file",
+      "command": "${workspaceFolder}/compile",
+    }
+  ],
+  "version": "2.0.0"
+}
