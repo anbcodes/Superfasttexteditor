@@ -1,0 +1,18 @@
+#!/bin/bash
+
+location="$1"
+
+if [ -z "$location" ]; then
+location="./fonts/RobotoMono-Regular.ttf"
+fi
+
+if [ -z "$size" ]; then
+  size="36"
+fi
+
+#-define h:format=a
+
+cat fontchars.txt | convert -background none -compress none -font "$location" -pointsize "$size" -fill white label:@- "${location%.*}.h"
+
+# convert -size "$width"x100 xc:none -font "./fonts/RobotoMono-Regular.ttf" -pointsize 30 -fill white \
+# -annotate +30+30 "$(cat fontchars.txt)" image.png

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <glad/glad.h>
+#include "wrapedgl.h"
 #if defined(PRODUCTION)
 #define checkForGLError(message)
 #define logCompileErrors(shader)
@@ -9,14 +10,6 @@
 #define checkForGLError(message) optionalCheckForGLErrors(message)
 #define logCompileErrors(shader) optionalLogCompileErrors(shader)
 #endif
-
-typedef struct WrappedGL {
-  GLuint vertexShader;
-  GLuint fragmentShader;
-  GLuint program;
-  // GLuint vertexBufferObject;
-  GLuint vertexArrayObject;
-} WrappedGL;
 
 void wglInit() {
   if (!gladLoadGL()) {
@@ -93,32 +86,32 @@ void wglUseProgram(WrappedGL* wgl) {
 void wglLoadVertexShaderFromFile(WrappedGL *wgl, const char *path) {
   const char *vertexShaderSource = readFile(path);
   printf("Vertex Shader:\n%s\n", vertexShaderSource);
-  wgl->vertexShader = glCreateShader(GL_VERTEX_SHADER);
+  GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
   checkForGLError("Creating vertex shader");
-  glShaderSource(wgl->vertexShader, 1, &vertexShaderSource, 0);
+  glShaderSource(vertexShader, 1, &vertexShaderSource, 0);
   checkForGLError("Adding source to vertex shader");
-  glCompileShader(wgl->vertexShader);
+  glCompileShader(vertexShader);
   checkForGLError("Compiling vertex shader");
-  logCompileErrors(wgl->vertexShader);
-  glAttachShader(wgl->program, wgl->vertexShader);
+  logCompileErrors(vertexShader);
+  glAttachShader(wgl->program, vertexShader);
   checkForGLError("Attaching vertex shader");
-  glDeleteShader(wgl->vertexShader);
+  glDeleteShader(vertexShader);
   checkForGLError("Deleting vertex shader");  
 }
 
 void wglLoadFragmentShaderFromFile(WrappedGL *wgl, const char *path) {
   const char *fragmentShaderSource = readFile(path);
   printf("fragment Shader:\n%s\n", fragmentShaderSource);
-  wgl->fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
   checkForGLError("Creating fragment shader");
-  glShaderSource(wgl->fragmentShader, 1, &fragmentShaderSource, 0);
+  glShaderSource(fragmentShader, 1, &fragmentShaderSource, 0);
   checkForGLError("Adding source to fragment shader");
-  glCompileShader(wgl->fragmentShader);
+  glCompileShader(fragmentShader);
   checkForGLError("Compiling fragment shader");
-  logCompileErrors(wgl->fragmentShader);
-  glAttachShader(wgl->program, wgl->fragmentShader);
+  logCompileErrors(fragmentShader);
+  glAttachShader(wgl->program, fragmentShader);
   checkForGLError("Attaching fragment shader");
-  glDeleteShader(wgl->fragmentShader);
+  glDeleteShader(fragmentShader);
   checkForGLError("Deleting fragment shader");
 }
 
@@ -127,9 +120,76 @@ void wglInitVertexArray(WrappedGL *wgl) {
   checkForGLError("Initializing vertex array");  
 }
 
+void wglInitTexture(WrappedGL *wgl, WrappedGLTexture* texture, const GLchar * name) {
+  glUseProgram(wgl->program);
+  checkForGLError("Using program (Init Texture)");
+  glGenTextures(1, &texture->id);
+  checkForGLError("Generating texture");
+  glBindTexture(texture->type, texture->id);
+  checkForGLError("Binding texture (Init)");
+  glTexParameteri(texture->type, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  checkForGLError("Setting MIN_FILTER parameter");
+  glTexParameteri(texture->type, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  checkForGLError("Setting MAG_FILTER parameter");
+  texture->location = glGetUniformLocation(wgl->program, name);
+  checkForGLError("Getting uniform location for texture");
+  glUniform1i(texture->location, texture->index);
+  checkForGLError("Setting uniform value for texture");
+}
+
+void wglGenTexture2D(WrappedGLTexture* texture, GLsizei width, GLsizei height, GLubyte * data) {
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  checkForGLError("Setting GL_PACK_ALIGNMENT");
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+  checkForGLError("Generating 2d texture");
+}
+
+void wglGenTexture1D(WrappedGLTexture* texture, GLsizei width, GLubyte * data) {
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_R8UI, width, 0, GL_RG, GL_UNSIGNED_BYTE, data);
+  checkForGLError("Generating 1d texture");
+}
+
+
+void wglInitUniformVec2(WrappedGL *wgl, WGLUniformVec2* uniform) {
+  glUseProgram(wgl->program);
+  checkForGLError("Using program (Init Uniform)");
+  uniform->location = glGetUniformLocation(wgl->program, uniform->name);
+  checkForGLError("Getting uniform location");
+  glUniform2f(uniform->location, uniform->value[0], uniform->value[1]);
+  checkForGLError("Setting uniform value");
+}
+
+void wglInitUniformInt(WrappedGL *wgl, WGLUniformInt* uniform) {
+  glUseProgram(wgl->program);
+  checkForGLError("Using program (Init Uniform)");
+  uniform->location = glGetUniformLocation(wgl->program, uniform->name);
+  checkForGLError("Getting uniform location");
+  glUniform1i(uniform->location, uniform->value);
+  checkForGLError("Setting uniform value");
+}
+
+void wglUpdateUniforms(WrappedGL *wgl) {
+  glUniform1i(wgl->mouseButton->location, wgl->mouseButton->value);
+  checkForGLError("Setting uniform value");
+  glUniform1i(wgl->mouseDown->location, wgl->mouseDown->value);
+  checkForGLError("Setting uniform value");
+  glUniform2f(wgl->mouse->location, wgl->mouse->value[0], wgl->mouse->value[1]);
+  checkForGLError("Setting uniform value");
+}
+
 void wglRender(WrappedGL *wgl) {
   glClear(GL_COLOR_BUFFER_BIT);
   checkForGLError("Clearing");
+
+  // glActiveTexture(GL_TEXTURE0 + wgl->data->index);
+  // checkForGLError("Activating Texture");
+  // glBindTexture(wgl->data->type, wgl->data->id);
+  // checkForGLError("Binding Texture");
+
+  glActiveTexture(GL_TEXTURE0 + wgl->font->index);
+  checkForGLError("Activating Texture");
+  glBindTexture(wgl->font->type, wgl->font->id);
+  checkForGLError("Binding Texture");
 
   glBindVertexArray(wgl->vertexArrayObject);
   checkForGLError("Binding vertex array object (In render)");
